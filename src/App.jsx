@@ -14,23 +14,24 @@ const _raw = import.meta.glob(
 )
 const FRAME_URLS = Object.keys(_raw).sort().map(k => _raw[k].default)
 const TOTAL_FRAMES = FRAME_URLS.length
-// HERO_HEIGHT is now computed dynamically per viewport (see useHeroHeight hook)
-const HERO_VH_MULTIPLIER = Math.max(TOTAL_FRAMES * 0.011, 3) // number of viewport-heights the hero occupies
+const HERO_VH_MULTIPLIER = Math.max(TOTAL_FRAMES * 0.011, 3)
 const KEYFRAME_STEP = 10
 
+// Always use window.innerHeight (same as scroll events use).
+// Also set --vh CSS var so sticky inner div matches exactly.
 function useHeroHeight() {
-  const getH = () => (window.visualViewport ? window.visualViewport.height : window.innerHeight) * HERO_VH_MULTIPLIER
+  const getH = () => {
+    const vh = window.innerHeight
+    document.documentElement.style.setProperty('--vh', `${vh}px`)
+    return vh * HERO_VH_MULTIPLIER
+  }
   const [height, setHeight] = useState(getH)
   useEffect(() => {
     const update = () => setHeight(getH())
-    const vv = window.visualViewport
-    if (vv) vv.addEventListener('resize', update)
+    update()
     window.addEventListener('resize', update)
-    window.addEventListener('orientationchange', () => setTimeout(update, 100))
-    return () => {
-      if (vv) vv.removeEventListener('resize', update)
-      window.removeEventListener('resize', update)
-    }
+    window.addEventListener('orientationchange', () => setTimeout(update, 200))
+    return () => window.removeEventListener('resize', update)
   }, [])
   return height
 }
@@ -162,14 +163,23 @@ function getEnterTransform(enterFrom, opacity) {
   }
 }
 
+function useIsMobile() {
+  const [mob, setMob] = useState(() => window.innerWidth < 640)
+  useEffect(() => {
+    const update = () => setMob(window.innerWidth < 640)
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return mob
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE TEXT CARD — positioned at different corners based on phase
 // ─────────────────────────────────────────────────────────────────────────────
 function PhaseText({ phase, prog }) {
+  const isMobile = useIsMobile()
   const opacity = phaseOpacity(phase, prog)
   const transform = getEnterTransform(phase.enterFrom, opacity)
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
 
   const posStyles = {
     'bottom-left': {
@@ -496,7 +506,7 @@ export default function App() {
     setScrolled(window.scrollY > 50)
     const sec = scrollSecRef.current
     if (!sec) return
-    const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight
+    const vh = window.innerHeight
     const scrollable = sec.offsetHeight - vh
     if (scrollable <= 0) return
     const prog = clamp((window.scrollY - sec.offsetTop) / scrollable, 0, 1)
@@ -698,7 +708,7 @@ export default function App() {
 
       {/* ══ HERO ═════════════════════════════════════════════════════════════ */}
       <div ref={scrollSecRef} id="top" style={{ height: `${heroHeight}px`, position: 'relative' }}>
-        <div style={{ position: 'sticky', top: 0, height: '100dvh', width: '100%', overflow: 'hidden' }}>
+        <div style={{ position: 'sticky', top: 0, height: 'var(--vh, 100vh)', width: '100%', overflow: 'hidden' }}>
 
           {/* Loading overlay */}
           {!firstReady && <LoadingScreen progress={loadProgress} />}
