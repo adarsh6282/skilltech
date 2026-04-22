@@ -121,9 +121,9 @@ const TESTIMONIALS = [
 // ─────────────────────────────────────────────────────────────────────────────
 // UTILS
 // ─────────────────────────────────────────────────────────────────────────────
-const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi)
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 
-function phaseOpacity(phase, prog) {
+function phaseOpacity(phase: typeof PHASES[0], prog: number) {
   const FADE = 0.055
   if (prog < phase.from || prog > phase.to) return 0
   return Math.min(
@@ -132,7 +132,7 @@ function phaseOpacity(phase, prog) {
   )
 }
 
-function getEnterTransform(enterFrom, opacity) {
+function getEnterTransform(enterFrom: string, opacity: number) {
   const dist = (1 - opacity) * 36
   if (opacity > 0.98) return 'translate(0,0)'
   switch (enterFrom) {
@@ -147,11 +147,11 @@ function getEnterTransform(enterFrom, opacity) {
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE TEXT CARD — positioned at different corners based on phase
 // ─────────────────────────────────────────────────────────────────────────────
-function PhaseText({ phase, prog }) {
+function PhaseText({ phase, prog }: { phase: typeof PHASES[0]; prog: number }) {
   const opacity = phaseOpacity(phase, prog)
   const transform = getEnterTransform(phase.enterFrom, opacity)
 
-  const posStyles = {
+  const posStyles: Record<string, React.CSSProperties> = {
     'bottom-left': {
       position: 'absolute',
       bottom: '14%',
@@ -307,7 +307,7 @@ function PhaseText({ phase, prog }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // LOADING SCREEN
 // ─────────────────────────────────────────────────────────────────────────────
-function LoadingScreen({ progress }) {
+function LoadingScreen({ progress }: { progress: number }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 30,
@@ -401,18 +401,18 @@ export default function App() {
   const [heroProgress, setHeroProgress] = useState(0)
   const [loadProgress, setLoadProgress] = useState(0)
   const [firstReady, setFirstReady] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', details: '', file: null })
+  const [form, setForm] = useState({ name: '', email: '', details: '', file: null as File | null })
   const [sent, setSent] = useState(false)
 
-  const scrollSecRef = useRef(null)
-  const canvasRef = useRef(null)
-  const imagesRef = useRef([])
-  const loadedRef = useRef(new Set())
+  const scrollSecRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const imagesRef = useRef<(HTMLImageElement | null)[]>([])
+  const loadedRef = useRef(new Set<number>())
   const drawnIdxRef = useRef(-1)
   const targetIdxRef = useRef(0)
-  const rafIdRef = useRef(null)
+  const rafIdRef = useRef<number | null>(null)
 
-  const drawIndex = useCallback((idx) => {
+  const drawIndex = useCallback((idx: number) => {
     const canvas = canvasRef.current
     if (!canvas) return
     const imgs = imagesRef.current
@@ -429,7 +429,7 @@ export default function App() {
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w; canvas.height = h
     }
-    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
     drawnIdxRef.current = idx
   }, [])
 
@@ -447,7 +447,7 @@ export default function App() {
     imagesRef.current = new Array(TOTAL_FRAMES).fill(null)
     const loaded = loadedRef.current
     let totalDone = 0
-    function loadAt(i, cb) {
+    function loadAt(i: number, cb?: () => void) {
       if (imagesRef.current[i] || loaded.has(i)) { cb?.(); return }
       loaded.add(i)
       const img = new Image()
@@ -468,7 +468,9 @@ export default function App() {
   useEffect(() => {
     if (!firstReady) return
     rafIdRef.current = requestAnimationFrame(rafLoop)
-    return () => cancelAnimationFrame(rafIdRef.current)
+    return () => {
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current)
+    }
   }, [firstReady, rafLoop])
 
   const onScroll = useCallback(() => {
@@ -496,11 +498,11 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize)
   }, [drawIndex])
 
-  const handleForm = e => {
-    const { name, value, files } = e.target
+  const handleForm = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, files } = e.target as HTMLInputElement
     setForm(p => ({ ...p, [name]: files ? files[0] : value }))
   }
-  const handleSubmit = e => { e.preventDefault(); setSent(true) }
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); setSent(true) }
 
   // ─── CSS injected once ────────────────────────────────────────────────────
   useEffect(() => {
@@ -542,14 +544,14 @@ export default function App() {
         padding: 12px 28px;
         background: #c8733a;
         color: #1a1108;
-        font-weight: 700;
-        font-size: 10px;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        font-family: 'DM Mono', monospace;
+        fontWeight: 700;
+        fontSize: 10px;
+        letterSpacing: 0.22em;
+        textTransform: uppercase;
+        fontFamily: 'DM Mono', monospace;
         border: 2px solid #d4a84b;
         cursor: pointer;
-        text-decoration: none;
+        textDecoration: none;
         transition: background 0.2s, box-shadow 0.2s;
         outline: none;
       }
@@ -606,6 +608,18 @@ export default function App() {
         opacity: 0.035;
         mix-blend-mode: overlay;
       }
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(4px); }
+      }
+      @media (min-width: 768px) {
+        .hidden-mobile { display: flex !important; }
+        .mobile-only { display: none !important; }
+      }
+      @media (max-width: 767px) {
+        .hidden-mobile { display: none !important; }
+        .mobile-only { display: flex !important; }
+      }
     `
     document.head.appendChild(style)
     return () => document.head.removeChild(style)
@@ -643,15 +657,15 @@ export default function App() {
                 color: 'rgba(245,237,224,0.55)', textDecoration: 'none', transition: 'color 0.2s',
                 fontFamily: "'DM Mono', monospace",
               }}
-                onMouseEnter={e => e.target.style.color = '#d4a84b'}
-                onMouseLeave={e => e.target.style.color = 'rgba(245,237,224,0.55)'}>
+                onMouseEnter={e => (e.target as HTMLElement).style.color = '#d4a84b'}
+                onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(245,237,224,0.55)'}>
                 {n}
               </a>
             ))}
             <a href="#contact" className="stitch-btn" style={{ padding: '8px 20px', fontSize: '9px' }}>Book Site Visit</a>
           </nav>
 
-          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'none', border: 'none', color: '#f5ede0', cursor: 'pointer' }}>
+          <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: 'none', border: 'none', color: '#f5ede0', cursor: 'pointer' }} className="mobile-only">
             {menuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
@@ -679,7 +693,7 @@ export default function App() {
 
           {/* Canvas */}
           <canvas ref={canvasRef} style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
             opacity: firstReady ? 1 : 0,
             transition: 'opacity 0.7s ease',
           }} />
@@ -719,7 +733,7 @@ export default function App() {
           <div style={{
             position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)',
             zIndex: 20, display: 'flex', flexDirection: 'column', gap: '10px', pointerEvents: 'none',
-          }}>
+          }} className="hidden-mobile">
             {PHASES.map((ph, i) => {
               const active = heroProgress >= ph.from && heroProgress < ph.to
               return (
@@ -748,7 +762,7 @@ export default function App() {
                 backdropFilter: 'blur(8px)',
                 overflow: 'hidden',
               }}>
-                {STATS.map((s, i) => (
+                {/* {STATS.map((s, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ textAlign: 'center', padding: '16px 28px' }}>
                       <div style={{
@@ -764,7 +778,7 @@ export default function App() {
                       <div style={{ width: '1px', height: '36px', background: 'rgba(212,168,75,0.2)' }} />
                     )}
                   </div>
-                ))}
+                ))} */}
               </div>
             </div>
           </div>
@@ -886,7 +900,7 @@ export default function App() {
           </div>
 
           {/* Stats row */}
-          <div style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid rgba(212,168,75,0.15)' }}>
+          <div style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', border: '1px solid rgba(212,168,75,0.15)' }}>
             {STATS.map((s, i) => (
               <div key={i} style={{
                 padding: '32px 24px', textAlign: 'center', background: '#1a1108',
@@ -915,39 +929,43 @@ export default function App() {
               <div key={i} style={{ width: '12px', height: '3px', background: i < 4 ? '#c8733a' : 'rgba(200,115,58,0.2)', borderRadius: '2px' }} />
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '220px', gap: '10px' }}>
+          <div className="gallery-grid">
             {GALLERY.map(({ id, label, tag, tall }) => (
-              <div key={id} style={{
-                position: 'relative', overflow: 'hidden', background: '#231508',
-                border: '1px solid rgba(212,168,75,0.12)',
-                gridRow: tall ? 'span 2' : 'span 1',
-                cursor: 'pointer',
-              }}
-                onMouseEnter={e => {
-                  e.currentTarget.querySelector('img').style.opacity = '0.65'
-                  e.currentTarget.querySelector('img').style.transform = 'scale(1.07)'
-                  e.currentTarget.querySelector('.gal-border').style.opacity = '1'
+              <div key={id} className={`gallery-item ${tall ? 'gallery-item-tall' : ''}`}>
+                <div style={{
+                  position: 'relative', overflow: 'hidden', background: '#231508',
+                  border: '1px solid rgba(212,168,75,0.12)',
+                  height: '100%',
+                  cursor: 'pointer',
                 }}
-                onMouseLeave={e => {
-                  e.currentTarget.querySelector('img').style.opacity = '0.45'
-                  e.currentTarget.querySelector('img').style.transform = 'scale(1)'
-                  e.currentTarget.querySelector('.gal-border').style.opacity = '0'
-                }}>
-                <img src={`https://picsum.photos/seed/${SEEDS[id - 1]}/800/600`} alt={label}
-                  style={{
-                    position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-                    opacity: 0.45, transition: 'opacity 0.5s, transform 0.5s', filter: 'sepia(0.3) contrast(1.1)',
+                  onMouseEnter={e => {
+                    const img = e.currentTarget.querySelector('img') as HTMLImageElement
+                    const border = e.currentTarget.querySelector('.gal-border') as HTMLElement
+                    if (img) { img.style.opacity = '0.65'; img.style.transform = 'scale(1.07)' }
+                    if (border) border.style.opacity = '1'
+                  }}
+                  onMouseLeave={e => {
+                    const img = e.currentTarget.querySelector('img') as HTMLImageElement
+                    const border = e.currentTarget.querySelector('.gal-border') as HTMLElement
+                    if (img) { img.style.opacity = '0.45'; img.style.transform = 'scale(1)' }
+                    if (border) border.style.opacity = '0'
+                  }}>
+                  <img src={`https://picsum.photos/seed/${SEEDS[id - 1]}/800/600`} alt={label}
+                    style={{
+                      position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+                      opacity: 0.45, transition: 'opacity 0.5s, transform 0.5s', filter: 'sepia(0.3) contrast(1.1)',
+                    }} />
+                  {/* warm overlay */}
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,17,8,0.9) 0%, rgba(74,47,26,0.2) 60%, transparent 100%)' }} />
+                  {/* hover border */}
+                  <div className="gal-border" style={{
+                    position: 'absolute', inset: '6px', border: '1px solid rgba(200,115,58,0.5)',
+                    opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'none',
                   }} />
-                {/* warm overlay */}
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(26,17,8,0.9) 0%, rgba(74,47,26,0.2) 60%, transparent 100%)' }} />
-                {/* hover border */}
-                <div className="gal-border" style={{
-                  position: 'absolute', inset: '6px', border: '1px solid rgba(200,115,58,0.5)',
-                  opacity: 0, transition: 'opacity 0.3s', pointerEvents: 'none',
-                }} />
-                <div style={{ position: 'absolute', insetInline: 0, bottom: 0, padding: '18px 16px' }}>
-                  <span style={{ fontFamily: "'DM Mono', monospace", color: '#d4a84b', fontSize: '8px', fontWeight: 500, letterSpacing: '0.24em', textTransform: 'uppercase' }}>{tag}</span>
-                  <p style={{ color: '#f5ede0', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '14px', marginTop: '4px' }}>{label}</p>
+                  <div style={{ position: 'absolute', insetInline: 0, bottom: 0, padding: '18px 16px' }}>
+                    <span style={{ fontFamily: "'DM Mono', monospace", color: '#d4a84b', fontSize: '8px', fontWeight: 500, letterSpacing: '0.24em', textTransform: 'uppercase' }}>{tag}</span>
+                    <p style={{ color: '#f5ede0', fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: '14px', marginTop: '4px' }}>{label}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -981,7 +999,7 @@ export default function App() {
                 </div>
                 {/* Large opening quote */}
                 <div style={{ fontFamily: "'Playfair Display', serif", fontSize: '48px', color: 'rgba(200,115,58,0.2)', lineHeight: 0.8, marginBottom: '-8px' }}>"</div>
-                <p style={{ color: 'rgba(245,237,224,0.6)', fontSize: '11px', lineHeight: 1.9, fontFamily: "'DM Mono', monospace', flex: 1" }}>{text}</p>
+                <p style={{ color: 'rgba(245,237,224,0.6)', fontSize: '11px', lineHeight: 1.9, fontFamily: "'DM Mono', monospace", flex: 1 }}>{text}</p>
                 <div style={{ paddingTop: '16px', borderTop: '1px dashed rgba(212,168,75,0.15)' }}>
                   <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#f5ede0', fontSize: '13px' }}>{name}</p>
                   <p style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(245,237,224,0.35)', fontSize: '9px', marginTop: '2px', letterSpacing: '0.08em' }}>{role}</p>
@@ -1069,7 +1087,7 @@ export default function App() {
                 ].map(({ id, label, type, placeholder }) => (
                   <div key={id}>
                     <label htmlFor={id} style={{ display: 'block', fontFamily: "'DM Mono', monospace", fontSize: '8px', color: 'rgba(245,237,224,0.4)', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</label>
-                    <input id={id} name={id} type={type} placeholder={placeholder} required value={form[id]} onChange={handleForm} className="input-leather" />
+                    <input id={id} name={id} type={type} placeholder={placeholder} required value={form[id as keyof typeof form] as string} onChange={handleForm} className="input-leather" />
                   </div>
                 ))}
                 <div>
@@ -1086,8 +1104,8 @@ export default function App() {
                     border: '1px dashed rgba(212,168,75,0.2)', padding: '14px 16px', cursor: 'pointer',
                     transition: 'border-color 0.2s',
                   }}
-                    onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(200,115,58,0.4)'}
-                    onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(212,168,75,0.2)'}>
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(200,115,58,0.4)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,168,75,0.2)'}>
                     <Upload size={14} style={{ color: 'rgba(245,237,224,0.3)' }} />
                     <span style={{ color: 'rgba(245,237,224,0.35)', fontSize: '11px', fontFamily: "'DM Mono', monospace" }}>
                       {form.file ? form.file.name : 'Upload photos of your site or existing frames'}
@@ -1135,8 +1153,8 @@ export default function App() {
                     display: 'block', padding: '6px 0', fontFamily: "'DM Mono', monospace",
                     fontSize: '10px', color: 'rgba(245,237,224,0.5)', textDecoration: 'none', transition: 'color 0.2s',
                   }}
-                    onMouseEnter={e => e.target.style.color = '#c8733a'}
-                    onMouseLeave={e => e.target.style.color = 'rgba(245,237,224,0.5)'}>{l}</a>
+                    onMouseEnter={e => (e.target as HTMLElement).style.color = '#c8733a'}
+                    onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(245,237,224,0.5)'}>{l}</a>
                 ))}
               </div>
             ))}
@@ -1159,8 +1177,8 @@ export default function App() {
             <div style={{ display: 'flex', gap: '24px' }}>
               {['Privacy Policy', 'Terms of Service', 'Sitemap'].map(l => (
                 <a key={l} href="#" style={{ fontFamily: "'DM Mono', monospace", color: 'rgba(245,237,224,0.25)', fontSize: '9px', textDecoration: 'none', transition: 'color 0.2s' }}
-                  onMouseEnter={e => e.target.style.color = '#c8733a'}
-                  onMouseLeave={e => e.target.style.color = 'rgba(245,237,224,0.25)'}>{l}</a>
+                  onMouseEnter={e => (e.target as HTMLElement).style.color = '#c8733a'}
+                  onMouseLeave={e => (e.target as HTMLElement).style.color = 'rgba(245,237,224,0.25)'}>{l}</a>
               ))}
             </div>
           </div>
@@ -1172,12 +1190,26 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(4px); }
         }
-        @media (min-width: 768px) {
-          .hidden-mobile { display: flex !important; }
-          button[aria-label="Menu"] { display: none; }
+        .gallery-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          grid-auto-rows: 220px;
+          gap: 10px;
+        }
+        .gallery-item {
+          grid-row: span 1;
+        }
+        .gallery-item-tall {
+          grid-row: span 2;
         }
         @media (max-width: 767px) {
-          .hidden-mobile { display: none !important; }
+          .gallery-grid {
+            grid-template-columns: 1fr;
+            grid-auto-rows: 200px;
+          }
+          .gallery-item-tall {
+            grid-row: span 1;
+          }
         }
       `}</style>
     </div>
