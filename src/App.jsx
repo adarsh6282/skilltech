@@ -14,27 +14,8 @@ const _raw = import.meta.glob(
 )
 const FRAME_URLS = Object.keys(_raw).sort().map(k => _raw[k].default)
 const TOTAL_FRAMES = FRAME_URLS.length
-const HERO_VH_MULTIPLIER = Math.max(TOTAL_FRAMES * 0.011, 3)
+const HERO_HEIGHT = Math.max(TOTAL_FRAMES * 11, 3000)
 const KEYFRAME_STEP = 10
-
-// Always use window.innerHeight (same as scroll events use).
-// Also set --vh CSS var so sticky inner div matches exactly.
-function useHeroHeight() {
-  const getH = () => {
-    const vh = window.innerHeight
-    document.documentElement.style.setProperty('--vh', `${vh}px`)
-    return vh * HERO_VH_MULTIPLIER
-  }
-  const [height, setHeight] = useState(getH)
-  useEffect(() => {
-    const update = () => setHeight(getH())
-    update()
-    window.addEventListener('resize', update)
-    window.addEventListener('orientationchange', () => setTimeout(update, 200))
-    return () => window.removeEventListener('resize', update)
-  }, [])
-  return height
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME — Sandal & Aged Leather
@@ -163,21 +144,10 @@ function getEnterTransform(enterFrom, opacity) {
   }
 }
 
-function useIsMobile() {
-  const [mob, setMob] = useState(() => window.innerWidth < 640)
-  useEffect(() => {
-    const update = () => setMob(window.innerWidth < 640)
-    window.addEventListener('resize', update)
-    return () => window.removeEventListener('resize', update)
-  }, [])
-  return mob
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PHASE TEXT CARD — positioned at different corners based on phase
 // ─────────────────────────────────────────────────────────────────────────────
 function PhaseText({ phase, prog }) {
-  const isMobile = useIsMobile()
   const opacity = phaseOpacity(phase, prog)
   const transform = getEnterTransform(phase.enterFrom, opacity)
 
@@ -187,18 +157,18 @@ function PhaseText({ phase, prog }) {
       bottom: '14%',
       left: 0,
       right: 0,
-      paddingLeft: isMobile ? '5%' : '5%',
-      paddingRight: isMobile ? '5%' : '55%',
+      paddingLeft: '5%',
+      paddingRight: '55%',
       textAlign: 'left',
     },
     'top-right': {
       position: 'absolute',
-      top: isMobile ? '14%' : '18%',
+      top: '18%',
       left: 0,
       right: 0,
-      paddingLeft: isMobile ? '5%' : '45%',
-      paddingRight: isMobile ? '5%' : '5%',
-      textAlign: isMobile ? 'left' : 'right',
+      paddingLeft: '45%',
+      paddingRight: '5%',
+      textAlign: 'right',
     },
     'center': {
       position: 'absolute',
@@ -206,8 +176,8 @@ function PhaseText({ phase, prog }) {
       left: 0,
       right: 0,
       transform: transform + ' translateY(-50%)',
-      paddingLeft: '5%',
-      paddingRight: '5%',
+      paddingLeft: '10%',
+      paddingRight: '10%',
       textAlign: 'center',
     },
   }
@@ -426,7 +396,6 @@ function StitchDivider() {
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
-  const heroHeight = useHeroHeight()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [heroProgress, setHeroProgress] = useState(0)
@@ -506,8 +475,7 @@ export default function App() {
     setScrolled(window.scrollY > 50)
     const sec = scrollSecRef.current
     if (!sec) return
-    const vh = window.innerHeight
-    const scrollable = sec.offsetHeight - vh
+    const scrollable = sec.offsetHeight - window.innerHeight
     if (scrollable <= 0) return
     const prog = clamp((window.scrollY - sec.offsetTop) / scrollable, 0, 1)
     targetIdxRef.current = clamp(Math.floor(prog * (TOTAL_FRAMES - 1)), 0, TOTAL_FRAMES - 1)
@@ -523,12 +491,10 @@ export default function App() {
     const onResize = () => {
       if (canvasRef.current) { canvasRef.current.width = 0; canvasRef.current.height = 0 }
       drawIndex(drawnIdxRef.current < 0 ? 0 : drawnIdxRef.current)
-      // Recalculate scroll progress for the new viewport size
-      onScroll()
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [drawIndex, onScroll])
+  }, [drawIndex])
 
   const handleForm = e => {
     const { name, value, files } = e.target
@@ -647,17 +613,15 @@ export default function App() {
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1108', color: '#f5ede0', fontFamily: "'DM Mono', monospace", overflowX: 'hidden', width: '100%' }}>
+    <div style={{ minHeight: '100vh', background: '#1a1108', color: '#f5ede0', fontFamily: "'DM Mono', monospace" }}>
 
       {/* ══ HEADER ═══════════════════════════════════════════════════════════ */}
       <header style={{
-        position: 'fixed', left: 0, right: 0, top: 0, zIndex: 50,
+        position: 'fixed', insetInline: 0, top: 0, zIndex: 50,
         transition: 'background 0.3s, border-color 0.3s',
         background: scrolled ? 'rgba(26,17,8,0.94)' : 'transparent',
         borderBottom: scrolled ? '1px solid rgba(212,168,75,0.15)' : '1px solid transparent',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
-        width: '100%',
-        boxSizing: 'border-box',
       }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {/* Logo */}
@@ -707,8 +671,8 @@ export default function App() {
       </header>
 
       {/* ══ HERO ═════════════════════════════════════════════════════════════ */}
-      <div ref={scrollSecRef} id="top" style={{ height: `${heroHeight}px`, position: 'relative' }}>
-        <div style={{ position: 'sticky', top: 0, height: 'var(--vh, 100vh)', width: '100%', overflow: 'hidden' }}>
+      <div ref={scrollSecRef} id="top" style={{ height: `${HERO_HEIGHT}px`, position: 'relative' }}>
+        <div style={{ position: 'sticky', top: 0, height: '100vh', width: '100%', overflow: 'hidden' }}>
 
           {/* Loading overlay */}
           {!firstReady && <LoadingScreen progress={loadProgress} />}
@@ -773,31 +737,32 @@ export default function App() {
 
           {/* Stats bar */}
           <div style={{
-            position: 'absolute', bottom: '56px', left: 0, right: 0, padding: '0 16px', zIndex: 10, pointerEvents: 'none',
+            position: 'absolute', bottom: '40px', left: 0, right: 0, padding: '0 24px', zIndex: 10, pointerEvents: 'none',
             opacity: clamp(1 - heroProgress * 5, 0, 1),
           }}>
             <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
               <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: '0',
+                display: 'inline-flex', flexWrap: 'wrap', gap: '0',
                 background: 'rgba(26,17,8,0.72)',
                 border: '1px solid rgba(212,168,75,0.2)',
                 backdropFilter: 'blur(8px)',
                 overflow: 'hidden',
-                width: '100%',
-                maxWidth: '600px',
               }}>
                 {STATS.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', flex: '1 1 50%', borderRight: (i % 2 === 0) ? '1px solid rgba(212,168,75,0.2)' : 'none', borderBottom: i < 2 ? '1px solid rgba(212,168,75,0.1)' : 'none' }}>
-                    <div style={{ textAlign: 'center', padding: '12px 16px', width: '100%' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={{ textAlign: 'center', padding: '16px 28px' }}>
                       <div style={{
                         fontFamily: "'Playfair Display', serif", fontStyle: 'italic',
-                        fontWeight: 900, color: '#c8733a', fontSize: '1.4rem', lineHeight: 1,
+                        fontWeight: 900, color: '#c8733a', fontSize: '1.8rem', lineHeight: 1,
                       }}>{s.v}</div>
                       <div style={{
-                        fontFamily: "'DM Mono', monospace", fontSize: '7px',
-                        color: 'rgba(245,237,224,0.45)', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: '3px',
+                        fontFamily: "'DM Mono', monospace", fontSize: '8px',
+                        color: 'rgba(245,237,224,0.45)', letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '3px',
                       }}>{s.l}</div>
                     </div>
+                    {i < STATS.length - 1 && (
+                      <div style={{ width: '1px', height: '36px', background: 'rgba(212,168,75,0.2)' }} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -921,12 +886,11 @@ export default function App() {
           </div>
 
           {/* Stats row */}
-          <div style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', border: '1px solid rgba(212,168,75,0.15)' }}>
+          <div style={{ marginTop: '72px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', border: '1px solid rgba(212,168,75,0.15)' }}>
             {STATS.map((s, i) => (
               <div key={i} style={{
                 padding: '32px 24px', textAlign: 'center', background: '#1a1108',
-                borderRight: i % 2 === 0 ? '1px solid rgba(212,168,75,0.1)' : 'none',
-                borderBottom: i < 2 ? '1px solid rgba(212,168,75,0.1)' : 'none',
+                borderRight: i < STATS.length - 1 ? '1px solid rgba(212,168,75,0.1)' : 'none',
               }}>
                 <div style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontWeight: 900, color: '#c8733a', fontSize: '2.4rem', lineHeight: 1 }}>{s.v}</div>
                 <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '8px', color: 'rgba(245,237,224,0.4)', letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '6px' }}>{s.l}</div>
@@ -951,7 +915,7 @@ export default function App() {
               <div key={i} style={{ width: '12px', height: '3px', background: i < 4 ? '#c8733a' : 'rgba(200,115,58,0.2)', borderRadius: '2px' }} />
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gridAutoRows: '220px', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: '220px', gap: '10px' }}>
             {GALLERY.map(({ id, label, tag, tall }) => (
               <div key={id} style={{
                 position: 'relative', overflow: 'hidden', background: '#231508',
@@ -1208,16 +1172,12 @@ export default function App() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(4px); }
         }
-        html, body {
-          overflow-x: hidden;
-          max-width: 100vw;
-        }
         @media (min-width: 768px) {
           .hidden-mobile { display: flex !important; }
+          button[aria-label="Menu"] { display: none; }
         }
         @media (max-width: 767px) {
           .hidden-mobile { display: none !important; }
-          .section-heading { line-height: 1.05 !important; }
         }
       `}</style>
     </div>
