@@ -14,8 +14,27 @@ const _raw = import.meta.glob(
 )
 const FRAME_URLS = Object.keys(_raw).sort().map(k => _raw[k].default)
 const TOTAL_FRAMES = FRAME_URLS.length
-const HERO_HEIGHT = Math.max(TOTAL_FRAMES * 11, 3000)
+// HERO_HEIGHT is now computed dynamically per viewport (see useHeroHeight hook)
+const HERO_VH_MULTIPLIER = Math.max(TOTAL_FRAMES * 0.011, 3) // number of viewport-heights the hero occupies
 const KEYFRAME_STEP = 10
+
+// Returns a px height that is always HERO_VH_MULTIPLIER × the real viewport height,
+// recalculated on every resize so there is never blank space below the hero on mobile.
+function useHeroHeight() {
+  const [height, setHeight] = useState(() => window.innerHeight * HERO_VH_MULTIPLIER)
+  useEffect(() => {
+    const update = () => setHeight(window.innerHeight * HERO_VH_MULTIPLIER)
+    // Use visualViewport when available (handles mobile browser chrome collapsing)
+    const vv = window.visualViewport
+    if (vv) {
+      vv.addEventListener('resize', update)
+      return () => vv.removeEventListener('resize', update)
+    }
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return height
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // THEME — Sandal & Aged Leather
@@ -396,6 +415,7 @@ function StitchDivider() {
 // MAIN APP
 // ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
+  const heroHeight = useHeroHeight()
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [heroProgress, setHeroProgress] = useState(0)
@@ -491,10 +511,12 @@ export default function App() {
     const onResize = () => {
       if (canvasRef.current) { canvasRef.current.width = 0; canvasRef.current.height = 0 }
       drawIndex(drawnIdxRef.current < 0 ? 0 : drawnIdxRef.current)
+      // Recalculate scroll progress for the new viewport size
+      onScroll()
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [drawIndex])
+  }, [drawIndex, onScroll])
 
   const handleForm = e => {
     const { name, value, files } = e.target
@@ -671,7 +693,7 @@ export default function App() {
       </header>
 
       {/* ══ HERO ═════════════════════════════════════════════════════════════ */}
-      <div ref={scrollSecRef} id="top" style={{ height: `${HERO_HEIGHT}px`, position: 'relative' }}>
+      <div ref={scrollSecRef} id="top" style={{ height: `${heroHeight}px`, position: 'relative' }}>
         <div style={{ position: 'sticky', top: 0, height: '100vh', width: '100%', overflow: 'hidden' }}>
 
           {/* Loading overlay */}
